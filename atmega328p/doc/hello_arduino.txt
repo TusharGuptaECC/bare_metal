@@ -1,0 +1,29 @@
+Install tools for arduino bare metal
+
+sudo apt-get update
+sudo apt-get upgrade -y
+
+sudo apt-get install gcc-avr binutils-avr avr-libc
+sudo apt-get install avrdude
+
+Cmds for bulding an executable file and uploading code to arduino
+
+COMPILE, CREATE THE OBJECT FILE FROM THE SOURCE CODE SPECIFYING THE MICROCONTROLLER IN WHICH WE WILL RUN THE PROGRAM:
+
+avr-gcc -Os -DF_CPU=16000000UL -mmcu=atmega328p -c -o blink_led.o blink_led.c
+
+WE CREATE THE EXECUTABLE:
+
+avr-gcc -mmcu=atmega328p blink_led.o -o blink_led
+
+AND WE CONVERT THE EXECUTABLE TO A BINARY FILE:
+
+avr-objcopy -O ihex -R .eeprom blink_led blink_led.hex
+
+FINALLY, WE CAN UPLOAD THE BINARY FILE:
+
+avrdude -F -V -c arduino -p ATMEGA328P -P /dev/ttyACM0 -b 115200 -U flash:w:blink_led.hex
+
+NOTE:- for finding the serial port at which the arduino is connected run
+ls /dev/tty*
+generally port ending with USB* of ACM* will be of arduino's here '*' is port no.

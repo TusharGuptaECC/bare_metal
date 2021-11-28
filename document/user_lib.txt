@@ -1,0 +1,170 @@
+ CREATING AND USING YOUR OWN LIBRARY CODE
+To create a Library of code you need to do the following:
+
+    (1) Create an INTERFACE to your library: mylib.h
+
+    (2) Create an IMPLEMENTATION of your library: mylib.c
+
+    (3) Create a LIBRARY OBJECT FILE (.o) that can be linked with programs that use your library
+
+    (3a) or create a SHARED OBJECT FILE (.so) from many .o files that can be dynamically linked with programs that use your library
+
+    (3b) or create an ARCHIVE FILE (.a) from many .o files that can be statically linked with programs that use your library
+
+    (4) USE the library in other C code: (a) #include "mylib.h" (b) link in the libary code into a.out file
+
+    (5) Set LD_LIBRARY_PATH environment variable for finding shared objects in non-standard locations at runtime 
+
+Details:
+
+    (1) INTERFACE: the header file to your library should contain definitions for everything exported by your library:
+        function prototypes with comments for users of your library functions
+        definitions for types and global variables exported by your library 
+
+    You should have "boiler plate" code (#ifndef ... #endif) around the header file's contents, to ensures that the preprocessor only includes the mylib.h file one time.
+
+    Here is what an example .h file might look like:
+
+    #ifndef _MYLIB_H_
+    #define _MYLIB_H_
+
+        // a constant definition exported by library:
+        #define MAX_FOO  20
+
+        // a type definition exported by library:
+    		struct foo_struct {  
+            int x;
+            float y;
+        };
+        typedef struct foo_struct foo_struct;
+
+        // a global variable exported by library
+        // "extern" means that this is not a variable declaration, it 
+        // just defines that a variable named total_foo of type int
+        // exits and you can use it (its declaration is in some library source file)
+        extern int total_foo; 	
+
+        // a function prototype for a function exported by library:
+        extern int foo(float y, float z);   // a very bad function name
+
+    #endif
+
+    (2) IMPLEMENTATION: create a mylib.c file that #includes "mylib.h" and contains the implementation of every function in your library.
+
+        #include "mylib.h"
+
+        ...
+        int total_foo;
+
+        int foo(float y, float z) { 
+    	...
+        }
+
+    (3) create a LIBRARY OBJECT FILE that can be linked into other programs that use your library (use the -c option to gcc to tell it just to create an object file (a .o file) rather than an executable:
+
+        gcc -o mylib.o -c mylib.c
+
+    you can then use the mylib.o file as the "library file" and statically link it into other programs that use it, or...
+
+    (3a) alternately, you can create a SHARED OBJECT FILE from one or more .o files that can be linked into other programs that use your library A shared object file is the Unix name for a dynamically linked library whose code is loaded into the a.out file at runtime. To create a .so file use the -shared flag to gcc. Here is what an example build might look like:
+
+           gcc -shared -o libmylib.so  mylib.o blah.o grr.o  -lm 
+
+    (3b) you could also build an ARCHIVE FILE (a statically linked library, libmylib.a) from one or more .o files. If you link with a static library, its code is copied into the a.out file at runtime.
+
+    See gcc documentation for more information on how to build .a and .so files.
+
+    (4) USE the library in other programs:
+
+        step 1: Add an include line (#include "mylib.h") in all program source files that use library definitions (e.g., test.c).
+
+        step 2: Link the program's .c file with the library object file 
+                (i.e. specify the mylib.o file as a command line argument to gcc): 
+
+                 gcc  test.c mylib.o
+
+            OR to link in libmylib.so (or libmylib.a):
+
+                 gcc  test.c -lmylib
+
+            OR to link with a library not in the standard path:
+
+                 gcc  test.c -L/home/newhall/lib -lmylib
+
+            The resulting a.out out will contain machine code for all the functions 
+            defined in test.c plus any mylib library functions that are called by 
+            the test.c code. 
+
+    (5) RUNNING an executable linked with a shared object file:
+
+       If the shared object file in not in /usr/lib, then you need to set your 
+       LD_LIBRARY_PATH environment variable so that the runtime linker can find 
+       and load your .so file into the executable at runtime:
+
+       # in bash:
+       export LD_LIBRARY_PATH=/home/newhall/lib:$LD_LIBRARY_PATH
+
+       # in tcsh:
+       setenv LD_LIBRARY_PATH /home/newhall/lib:$LD_LIBRARY_PATH
+---------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------
+STATIC LIBRARY
+
+The crawler code is divided into two directories: crawler and util, we want to build the util into a C library.
+
+Compiling .c to .o
+
+Navigate into util directory and compile all the .c source files into .o object files by supplying the -c flag:
+
+$ gcc -Wall -c *.c
+
+You should see a number of .o object files created corresponding to the .c source files.
+
+Creating a Library File
+
+Next, we issue:
+
+$ ar -cvq libtseutil.a *.o
+q - dictionary.o
+q - file.o
+q - hash.o
+q - html.o
+
+which takes all the .o object files generated from previous step and packages them into a single .a static library file, named lib[xxxxx].a. In our case, since we are making the util library for the tiny search engine (tse), we named it libtseutil.a. Notice, that the name must start with lib and end with the .a extension. (ar is the Linux archiver utility, man it to learn about it and its options.)
+
+The ar command does the heavy lifting and – creates and maintains library archives – take a look at the man pages to determine the detail meaning of the flags; in brief:
+
+-c Whenever an archive is created, an informational message to that effect is written to standard error.
+If the -c option is specified, ar creates the archive silently.
+
+-v Provide verbose output.
+
+-q Quickly append the specified files to the archive. If the archive does not exist a new archive file is created.
+
+We have successfully built our own C library file and we are ready to link it to build our crawler binary. But before that, we can also take an optional step to view what files our library contains.
+
+Listing Files in a Library
+
+You can do
+
+$ ar -t libtseutil.a
+
+to see what files this library includes. For example, following is the output, indicating the four .o files included in this library file.
+
+$ ar -t libtseutil.a
+dictionary.o
+file.o
+hash.o
+html.o
+
+Linking with a Static C Library
+
+Now we navigate to the crawler directory and build our executable binary. There are two ways of doing this; we can do
+
+$ gcc -o crawler crawler.c list.c ../util/libtseutil.a
+
+in which we directly specify the path to the the library file; or we can do
+
+$ gcc -o crawler crawler.c list.c -L../util/ -ltseutil
+
+in which we specify the directory path containing the library file with the -L flag and specify that we want to link to our TinySearchEngine util library with the switch -ltseutil. Pay close attention to the spelling of this switch and the name we gave to our library file: this switch is basically cooked up by just cutting off the lib prefix and .a extension from the library name and sticking a -l before what’s left.
