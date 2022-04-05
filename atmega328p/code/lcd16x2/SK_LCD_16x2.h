@@ -10,9 +10,9 @@
 
  
 
-void sendCmd(unsigned char);
-void sendData(unsigned char);
-void initLcd(void);
+void sendCmd(unsigned char, unsigned char);
+void sendData(unsigned char, unsigned char);
+void initLcd(unsigned char);
 
 #endif
 
