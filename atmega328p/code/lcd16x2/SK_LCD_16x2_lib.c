@@ -4,13 +4,13 @@ void initLcd(unsigned char bit)
 {
 	_delay_ms(20);	// lcd takes approx. 15 ms to startup
 	if (bit == 8)
-		sendCmd(0x38);	// 8-bit bit mode
+		sendCmd(bit, 0x38);	// 8-bit bit mode
 	else
-		sendCmd(0x28);	// 4-bit bit mode
-	sendCmd(0x06);	// entry mode
-	sendCmd(0x01);	// clear display
-	sendCmd(0x02);	// return home
-	sendCmd(0x0C);	// display ON cursor OFF
+		sendCmd(bit, 0x28);	// 4-bit bit mode
+	sendCmd(bit, 0x06);	// entry mode
+	sendCmd(bit, 0x01);	// clear display
+	sendCmd(bit, 0x02);	// return home
+	sendCmd(bit, 0x0C);	// display ON cursor OFF
 }
 
 void sendCmd(unsigned char bit, unsigned char cmd)
