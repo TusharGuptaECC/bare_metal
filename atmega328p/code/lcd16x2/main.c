@@ -23,18 +23,18 @@
 int main()
 {
 	unsigned char message[] = "put any message here";
-	//unsigned char x = 'a';
+	unsigned char bit = 8;
 	int i;
 	DDRB |= 0x07;
 	DDRD |= 0xFF;
 
-	initLcd();
-	sendData(0x41);
+	initLcd(bit);
+	sendData(bit, 0x41);
 	for(i=0;message[i] != '\0';i++)
 	{
 		if(i == 16)
-			sendCmd(0xC0);
-		sendData(message[i]);
+			sendCmd(bit, 0xC0);
+		sendData(bit, message[i]);
 	}
 
 	/*while(1)
