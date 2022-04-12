@@ -11,6 +11,9 @@
 #include <util/delay.h>
 #include <stdint.h>
 
+#define lcd_mode 8
+#define en_pin 3
+
 /*user defined functions*/
 void enInputCapture(void);
 unsigned char timeByUltrasonic(void);
@@ -19,16 +22,17 @@ void initLcd(unsigned char bit, unsigned char en_pin);
 void sendCmd(unsigned char bit, unsigned char cmd, unsigned char en_pin);
 void sendData(unsigned char bit,unsigned char data, unsigned char en_pin);
 char displayResult(unsigned int result);
-char displayResult1(void);
-void sendString(char *message);
+void displayResult1(void);
+//void sendString(char *message);
+void sendString(void);
 
-//unsigned int result;
+/*user defined global variables*/
+unsigned char message[] = "Initializing the distance meter";
 
 int main()
 {
   long int positive_edge, negative_edge,result;
-  char start_msg = "Initializing the distance meter ...";
-  //char a;
+  int i;
 
   /*Pin PB0 as input and without pull-ups*/
   DDRB &= ~(1 << 0);
@@ -36,47 +40,44 @@ int main()
 
   /*Configuring PORTD as Output and all HIGH*/
   DDRD = 0xFF;
-  PORTD = 0xFF;
 
-  /*PB 1,2,4 as output*/
+  /*PB 1,2,4, and 5 as output*/
   DDRB |= ( 1 << 2 );
   DDRB |= ( 1 << 1 );
   DDRB |= (1 << 4);
-
-  /*PB 5 as LOW*/
-  //PORTB &= ~(1 << 5);
-  
-  //DDRC |= (1 << 1);
-  //PORTC |= (1 << 1);
-
-  /*PB 1 as OUTPUT*/
-  //DDRB |= (1<< 1);
+  DDRB |= (1 << 5);
 
   //Serial.begin(57600);
   
-  initLcd(8,3);
-  sendString(start_msg);
+  initLcd(lcd_mode,3); // initializing the lcd
+
+  for(i=0;message[i] != '\0';i++)
+  {
+    if(i == 16)
+      sendCmd(bitt, 0xC0,3);
+    sendData(bitt, message[i],3);
+  }
   
   enInputCapture();
   
   TIFR1 |= (1 << ICF1);   // clear input capture flag
-  //sendData(8,'S',3);
+  sendCmd(8, 0x01,3);  // clear display
   while(1)
   {
     TCCR1B = 0x41;  // positive edge trigger and prescaler = 1
+    
+    // generating a pulse on trigger pin of sensor
     PORTB |= (1 << 4);
     _delay_us(10);
     PORTB &= ~(1 << 4);
     
     while ((TIFR1 & (1 << ICF1)) == 0); // waiting for the positive edge
     positive_edge = ICR1;  // storing ICR1 register value in positive_edge
-    //PORTB |= (1 << 5); 
     TIFR1 |= (1<<ICF1); // clear input capture flag
     
     TCCR1B = 0x01;  // positive edge trigger and prescaler = 1
     while ((TIFR1&(1<<ICF1)) == 0); // waiting for the positive edge
     negative_edge = ICR1;  // storing ICR1 register value in positive_edge
-    //PORTB &= ~(1 << 5); 
     TIFR1= (1<<ICF1); // clear input capture flag
     
     if (negative_edge > positive_edge)
@@ -84,10 +85,15 @@ int main()
     else
       result = positive_edge-negative_edge;
     result = (result*170)/160000; // distance in cm
+
     //Serial.println(result,DEC);
+    
+    // if distance is less than 5 cm then onboard LED glows
+    (result < 5 )? (PORTB |= (1 << 5)) : (PORTB &= ~(1 << 5));
+    sendCmd(8, 0x02,3);  // return home
     displayResult(result);
     
-    _delay_ms(50);
+    // resetting the counter value to 0
     TCNT1 = 0x00;
   }
   return 0;
@@ -209,65 +215,51 @@ void sendData(unsigned char bit,unsigned char data, unsigned char en_pin)
   }
 }
 
-char displayResult(unsigned int result)
-{
-  char message[11] = "abcdefghij";//"0123456789";
-  //unsigned int t = result1;
-  //t = t + 1;
-  int i=0;
-  while(result != 0)
-  {
-    //sendData(8,message[i],3);
-    if (result % 2 == message[i])
-    {
-      //_delay_ms(30);
-      sendData(8,message[i],3);
-    }
-    if (i > 9)
-    {
-      i = -1;
-      result = result / 2;
-    }
-    i = i+1;
-    //_delay_ms(30);
-  }
-  return message[i];
-}
-
-char displayResult1(unsigned char result)
-{
-  char message[11] = "abcdefghij";//"0123456789";
-  //unsigned int t = result1;
-  //t = t + 1;
-  int i=0;
-  while(result != 0)
-  {
-    //sendData(8,message[i],3);
-    if (result % 2 == message[i])
-    {
-      _delay_ms(30);
-      sendData(8,message[i],3);
-    }
-    if (i > 9)
-    {
-      i = -1;
-      result = result / 2;
-    }
-    i = i+1;
-    _delay_ms(30);
-  }
-  return message[i];
-}
-
-void sendString(char *message)
+void displayResult(unsigned int result)
 {
   unsigned char i = 0;
-  while(message[i] != '\0')
+  unsigned char distance[] = {'0','0','0'};
+  while(result != 0)
   {
-    if (i > 15)
-    {
-      sendCmd(8, 0xC0,3);
-    }
-    sendData(8,'s',3);
+    
+    //sendData(8,message[i],3);
+    if (result % 10 == 0 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 1 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 2 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 3 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 4 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 5 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 6 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 7 )
+      distance[2-i] = result % 10+'0';
+    else if (result % 10 == 8 )
+      distance[2-i] = result % 10+'0';
+    else
+      distance[2-i] = result % 10+'0';
+     result = result/10;
+     i = i+1;
+  }
+  for(i = 0; i < 3; i++)
+  {
+    sendData(8,distance[i],3);  
   }
 }
+
+void displaySting(unsigned char* message)
+{
+  unsigned char i;
+  for(i=0;message[i] != '\0';i++)
+  {
+    if(i == 16)
+      sendCmd(bitt, 0xC0,3);
+    sendData(bitt, message[i],3);
+  }
+}
+
