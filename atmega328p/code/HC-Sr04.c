@@ -12,7 +12,6 @@
 #include <stdint.h>
 
 #define lcd_mode 8
-#define en_pin 3
 
 /*user defined functions*/
 void enInputCapture(void);
@@ -21,13 +20,14 @@ void denInputCap(void);
 void initLcd(unsigned char bit, unsigned char en_pin);
 void sendCmd(unsigned char bit, unsigned char cmd, unsigned char en_pin);
 void sendData(unsigned char bit,unsigned char data, unsigned char en_pin);
-char displayResult(unsigned int result);
-void displayResult1(void);
-//void sendString(char *message);
+void displayResult(unsigned int result);
+void displayMsg(unsigned char*);
 void sendString(void);
 
 /*user defined global variables*/
 unsigned char message[] = "Initializing the distance meter";
+unsigned char message1[] = "<<<Distance>>>";
+unsigned char message2[] = " cm";
 
 int main()
 {
@@ -46,22 +46,15 @@ int main()
   DDRB |= ( 1 << 1 );
   DDRB |= (1 << 4);
   DDRB |= (1 << 5);
-
-  //Serial.begin(57600);
   
   initLcd(lcd_mode,3); // initializing the lcd
-
-  for(i=0;message[i] != '\0';i++)
-  {
-    if(i == 16)
-      sendCmd(bitt, 0xC0,3);
-    sendData(bitt, message[i],3);
-  }
-  
-  enInputCapture();
-  
-  TIFR1 |= (1 << ICF1);   // clear input capture flag
+  displayMsg(message);
   sendCmd(8, 0x01,3);  // clear display
+  displayMsg(message1);
+  sendCmd(lcd_mode, 0xC0,3); // send cursor in next line
+  enInputCapture();
+  TIFR1 |= (1 << ICF1);   // clear input capture flag
+  
   while(1)
   {
     TCCR1B = 0x41;  // positive edge trigger and prescaler = 1
@@ -84,14 +77,15 @@ int main()
       result = negative_edge - positive_edge;
     else
       result = positive_edge-negative_edge;
+     
     result = (result*170)/160000; // distance in cm
 
-    //Serial.println(result,DEC);
     
     // if distance is less than 5 cm then onboard LED glows
     (result < 5 )? (PORTB |= (1 << 5)) : (PORTB &= ~(1 << 5));
-    sendCmd(8, 0x02,3);  // return home
+    sendCmd(lcd_mode, 0xC0,3); // send cursor in next line
     displayResult(result);
+    displayMsg(message2);
     
     // resetting the counter value to 0
     TCNT1 = 0x00;
@@ -217,49 +211,33 @@ void sendData(unsigned char bit,unsigned char data, unsigned char en_pin)
 
 void displayResult(unsigned int result)
 {
-  unsigned char i = 0;
-  unsigned char distance[] = {'0','0','0'};
-  while(result != 0)
+  unsigned char distance[] = {'0','0','0'},i=0; // range of distance meter is 3 cm to 400 cm so only three digits will be present
+  unsigned int temp = result;
+  while(result / 10 != 0)
   {
-    
-    //sendData(8,message[i],3);
-    if (result % 10 == 0 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 1 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 2 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 3 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 4 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 5 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 6 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 7 )
-      distance[2-i] = result % 10+'0';
-    else if (result % 10 == 8 )
-      distance[2-i] = result % 10+'0';
-    else
-      distance[2-i] = result % 10+'0';
-     result = result/10;
-     i = i+1;
+    distance[2-i] = (result % 10) + '0';
+    result /= 10;
+    i++;
   }
+  if (temp / 100 != 0)
+  {
+    i++;  
+  }
+  distance[2-i] = (result % 10) + '0';
   for(i = 0; i < 3; i++)
   {
     sendData(8,distance[i],3);  
   }
 }
 
-void displaySting(unsigned char* message)
+void displayMsg(unsigned char* message)
 {
   unsigned char i;
   for(i=0;message[i] != '\0';i++)
   {
     if(i == 16)
-      sendCmd(bitt, 0xC0,3);
-    sendData(bitt, message[i],3);
+      sendCmd(lcd_mode, 0xC0,3);
+    sendData(lcd_mode, message[i],3);
   }
 }
 
