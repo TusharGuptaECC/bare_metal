@@ -108,12 +108,12 @@ signed char i2cRead(int do_ack)
 	return data;
 }
 
-void i2cSlaveTransmit(unsigned char data)
-{
+// void i2cSlaveTransmit(unsigned char data)
+// {
 
-}
+// }
 
-unsigned char i2cSlaveReceive(void)
-{
+// unsigned char i2cSlaveReceive(void)
+// {
 
-}
+// }
