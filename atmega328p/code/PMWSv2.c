@@ -96,6 +96,8 @@ uint32_t prev_humid_data = 0;
 uint32_t prev_temp_data = 0;
 int16_t motor_on_duration = 0;
 char pump_speed = 0;
+unsigned char pump_status = PUMP_OFF;
+unsigned char wind_lock = 1;
 //////////////////////////////////////////////////////////////
 // ISRs /////////////////////////////////////////////////////
 ISR(PCINT0_vect)
@@ -131,7 +133,7 @@ ISR(TIMER1_OVF_vect)
 
 ISR(TIMER2_OVF_vect)
 {
-    over_flow_2++;
+  over_flow_2++;
 	PORTC ^= (1 << 0);
 	if(over_flow_2 > 100000)
 	{
@@ -153,16 +155,94 @@ void initSleep(unsigned char mode)
     PRR = 0xA7;
 }
 
-// This function is device and requirement specific :)
-void prepareForSleep(void)
-{
-
-}
-
 void goToSleep(void)
 {
     SMCR |= (1 << SE);  // SE - sleep enable bit i.e. bit 0
     asm("SLEEP\n\t");
+}
+
+void afterWakeUp(void)
+{
+    SMCR &= ~(1 << SE);  // SE - sleep enable bit i.e. bit 0
+    //asm("sleep");
+}
+
+// This function is device and requirement specific :)
+// void prepareForSleep(void) 
+// {
+// 	// in this code we are using a deep sleep mode i.e. power save mode
+// 	// so most of the input pins will be disabled but we have three pins in floating state
+// 	// so we have to pull them up
+// 	DDRC &= 0xF8;
+// 	PORTC |= 0x07;
+// 	// disabling the digital input buffer
+// 	DIDR0 = 0x3F;
+// 	DIDR1 = 0x03;
+// }
+
+#define _2k_cycles 0x00 // 16 ms
+#define _4k_cycles 0x01 // 32 ms
+#define _8k_cycles 0x02 // 64 ms
+#define _16k_cycles 0x03    // 0.125 sec
+#define _32k_cycles 0x04    // 0.250 sec
+#define _64k_cycles 0x05    // 0.50 sec
+#define _128k_cycles 0x06   // 1 sec
+#define _256k_cycles 0x07   // 2 sec
+#define _512k_cycles 0x20   // 4 sec
+#define _1024k_cycles 0x21  // 8 sec
+
+#define WDT_stopped 0x00
+#define WDT_reset_mode 0x08
+#define WDT_interrupt_mode 0x40 // 0100,0000 0010,0001
+#define WDT_IandR_mode 0x48
+
+#define ten_mins 75
+#define five_mins 38
+#define one_min 8
+volatile unsigned char watch_dog_wakeup = 0;
+
+ISR(WDT_vect)
+{
+    // watchdog_count++;
+	/*
+	*	If in 8 sec there is no human intervention then put PMWS in autmatic mode.
+	*/
+	if (!watch_dog_wakeup)
+	{
+		is_pressed = 1;
+		is_automatic = 1;
+	}
+	// if (index2 == 42)
+	// {
+	// 	index2++;
+	// }
+	watch_dog_wakeup++;
+    turnOffWdt();
+}
+
+void turnOffWdt(void)
+{
+    asm("CLI\n\t; disable global interrupts"
+        "WDR\n\t; reset wdt timer"
+        );
+    MCUSR &= ~(1 << WDRF);  // clearing wdt reset flag
+    WDTCSR &= ~(1 << WDE);  // clearing WDE bit
+    WDTCSR |= ((1 << WDCE) | (1 << WDE));   // enabling the time sequence
+    WDTCSR = 0x00;  // turnoff the WDT timer
+    asm("SEI\n\t; enable the global interrupts");
+}
+
+// Configures and start the WDT timer
+void initWdt(unsigned char mode, unsigned char cycles)
+{
+    asm("CLI\n\t; disable global interrupts"
+        "WDR\n\t; reset wdt timer"
+        );
+    MCUSR &= ~(1 << WDRF);  // clearing wdt reset flag
+    WDTCSR &= ~(1 << WDE);  // clearing WDE bit
+    WDTCSR |= ((1 << WDCE) | (1 << WDE));   // enabling the time sequence
+    WDTCSR = 0x80| mode | cycles;    //1110,0001;
+    asm("SEI\n\t; enable the global interrupts");
 }
 
 int main()
@@ -182,6 +262,8 @@ int main()
   welcomePage2();
   _delay_ms(1000);
   homePage_1();
+  // If no human intervention in 8 sec then put system in automatic mode. Helpful in power failure recovery
+  initWdt(WDT_interrupt_mode, _1024k_cycles); 
   // initSleep(power_down_mode);
   // goToSleep();
   while (1)
@@ -195,17 +277,43 @@ int main()
       {
         while (1)
         {
+			while (watch_dog_wakeup < one_min)	// sleep for given minutes
+			{
+				sendCmd(8,CLEAR_DISPLAY);
+				sendCmd(8, RETURN_HOME);
+				sendData(8, '$');
+				initWdt(WDT_interrupt_mode, _1024k_cycles);
+				initSleep(power_save_mode);
+				goToSleep();
+				afterWakeUp();
+				wind_lock = 1;
+				if (is_pressed)	// any value but not 0 will break the loop as user can press any button to check humidity and temp.
+				{
+					_delay_ms(wait);
+					// debug('g');
+					is_pressed = 0;
+					break;
+				}
+			} 
+			// debug('h');
+			
             prev_humid_data = humid_data;
             prev_temp_data = temp_data;
 
+			//_delay_ms(2000);
             dht11();  // start input cap, input cap intrrupt en, reset timer1, end input cap
-            
+            // debug('a');
 			humid_data = getHumidityInt();
             temp_data = getTemperatureInt();
             automaticPage(0);
-			if ((temp_data - prev_temp_data != 0) && (enter))
+			// debug('b');
+			if ((temp_data - prev_temp_data != 0) && (enter) && (wind_lock))// && (!wind_detected))
             {
+				//wind_detected = windDetector();
+				wind_lock = 0;
+				pump_status = PUMP_ON;	// i.e. pump is on
 				theLogic();
+				// debug('c');
             }
             enter = 1;
             
@@ -215,11 +323,14 @@ int main()
 			{
 				_delay_ms(wait);
 				powerUpPump(PUMP_OFF);
+				pump_status = PUMP_OFF;	// i.e. pump is off
 				automaticPage(1);
 				resetTimer2();
 				_delay_ms(wait);
 				over_flow_2 = 0;
+				//wind_detected = 0;
 			}
+			// debug('d');
             //sendCmd(8, 0x01); // clear screen
             sendCmd(8, 0x02); // return home
             if (is_pressed == 1)
@@ -231,6 +342,12 @@ int main()
 				powerUpPump(PUMP_OFF);
                 break;
             }
+			// debug('e');
+			if (pump_status == PUMP_OFF)
+			{
+				watch_dog_wakeup = 1;
+			}
+			// debug('f');
         }
       }
       else
@@ -240,7 +357,7 @@ int main()
         {
           if (is_pressed == 1)
           {
-            // debugging code
+            // // debugging code
             /*
               if (is_pressed == 1)
               {
@@ -719,8 +836,9 @@ void dht11(void)
     PORTB &= ~_BV(PORTB0);  // remove PB0 PULL-UP
     enInputCap(); // initialize input capture
     enableIcInterrupt();// enable the interrupt
-      while (index2 <= 42)
-      {
+	//initWdt(WDT_interrupt_mode, _1024k_cycles);// saving from infinite loop if occured due to any reason
+	while (index2 <= 42)
+	{
 		
 		if (index2 >= 4)
 		{
@@ -733,8 +851,11 @@ void dht11(void)
 				dht_data[index2 - 4] = 0;
 			}
 		}
-      }
-
+	}
+	// debug(digits[index2/10]);
+	_delay_ms(1000);
+	// debug(digits[index2%10]);
+	_delay_ms(1000);
     resetTimer1();
     _delay_ms(500);
     over_flow = 0;
@@ -781,6 +902,9 @@ void displayHumidData(uint32_t h)
     }
 }
 
+/*
+*	It starts the timer2 and also enables the timer2 interrupts.
+*/
 void initTimer2(void)
 {
   TCCR2A = 0x00;
@@ -790,6 +914,9 @@ void initTimer2(void)
   enableTimer2Interrupt();
 }
 
+/*
+*	It resets the timer2
+*/
 void resetTimer2(void)
 {
   TCCR2A = 0x00;
@@ -798,10 +925,14 @@ void resetTimer2(void)
   TCNT2 = 0;
 }
 
+/*
+*	This function decides the speed and on timings of pump.
+*	It also displays the speed on the screen.
+*/
 void theLogic(void)
 {
 	int count = 0, count_inverse = 0;
-	// only last temp change will trigger the reaction
+	// only first temp change will trigger the reaction i.e windlock mechanism
 	resetTimer2();
 	_delay_ms(wait);
 	over_flow_2 = 0;
@@ -867,7 +998,12 @@ void theLogic(void)
 	initTimer2();
 }
 
-// void initSleep()
-// {
-	
-// }
+/*
+*	This program helps in debugging
+*/
+void debug(unsigned char value)
+{
+	sendCmd(LCD_MODE, CLEAR_DISPLAY);
+	sendCmd(LCD_MODE, RETURN_HOME);
+	sendData(LCD_MODE, value);
+}
