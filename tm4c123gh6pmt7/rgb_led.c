@@ -1,6 +1,7 @@
 /*
  *  Author: Tushar Gupta
  *  File: main.c // this is the main file for the project
+ *  Developed using Keil uVision5
  */
 #include <stdint.h>
 #include "TM4C123.h"
@@ -41,8 +42,8 @@ void clockInit(void)
 {
 	// board is set in such a way that we don't have to make any change in system RCC register
 	// RCC default value is 0x078E.3AD1
-   RCGCGPIO_Reg |= (1 << clk_portf);  // clock for PORTF
-	 // SYSCTL->RCGC0 |= (1 << clk_portf);	// legacy register not used here.
+   	RCGCGPIO_Reg |= (1 << clk_portf);  // clock for PORTF
+	// SYSCTL->RCGC0 |= (1 << clk_portf);	// legacy register not used here.
 }
 
 void gpioPortInit()
@@ -54,7 +55,7 @@ void gpioPinInit(unsigned char function, unsigned char dir, unsigned char pin)
 {
     if (function == GPIO)
     {
-			GPIOF->AFSEL &= ~(1 << pin);
+		GPIOF->AFSEL &= ~(1 << pin);
     }
 
     GPIOF->DR2R |= ((1 << red_led) | (1 << blue_led) | (1 << green_led));
@@ -75,7 +76,7 @@ void led(unsigned char colour, unsigned char status)
     if (status && (colour == red_led))
     {
         GPIOF->DATA |= (1 << red_led);
-		}
+	}
     else if (status && (colour == blue_led))
     {
         GPIOF->DATA |= (1 << blue_led);
