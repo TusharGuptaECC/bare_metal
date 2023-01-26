@@ -9,11 +9,15 @@
 #include "onBoard_LEDs.h"
 #include "delay.h"
 
-void clockInit(void);
-#define my_delay 10000	/*provides some of 500 ms approx.*/
+void clockInit(unsigned char clk_src);
+
+#define PIOSC 0	/*Precision internal oscillator*/
+#define MOSC 1	/*External main oscillator*/
+#define my_delay 1000	
+
 int main(void)
 {
-	clockInit();
+	clockInit(MOSC);
 	gpioPinInit(GPIO, OUTPUT, red_led);
 	gpioPinInit(GPIO, OUTPUT, blue_led);
 	gpioPinInit(GPIO, OUTPUT, green_led);
@@ -66,14 +70,22 @@ int main(void)
 		led(blue_led, OFF);
 		led(green_led, OFF);
 		delayMS(my_delay);
-	
 	}
+	return 0;
 }
 
-void clockInit(void)
+void clockInit(unsigned char clk_src)
 {
-	// board is set in such a way that we don't have to make any change in system RCC register
 	// RCC default value is 0x078E.3AD1
-   	RCGCGPIO_Reg |= (1 << clk_portf);  // clock for PORTF
+	if (clk_src == MOSC)
+	{
+		SYSCTL->RCC = 0x078E3D40;
+	}
+	if (clk_src == PIOSC)
+	{
+		SYSCTL->RCC = 0x078E3AD1;
+	}
+  
+	RCGCGPIO_Reg |= (1 << clk_portf);  // clock for PORTF
 	// SYSCTL->RCGC0 |= (1 << clk_portf);	// legacy register not used here.
 }
