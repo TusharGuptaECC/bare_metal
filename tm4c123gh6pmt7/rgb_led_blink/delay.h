@@ -23,9 +23,10 @@
 #define one_shot_mode_bit 0
 #define periodic_mode_bit 1
 #define TBTORIS_bit 8
+#define TBTOIM_bit 8
 
 /*functions declaration*/
-void delayMS(uint16_t); /*gives a blocking delay in miliseconds*/
-void delayUS(uint16_t); /*gives a blocking delay in micro seconds*/
+void delayMS(uint32_t); /*gives a blocking delay in miliseconds*/
+void delayUS(uint32_t); /*gives a blocking delay in micro seconds*/
 
 #endif
