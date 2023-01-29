@@ -4,6 +4,8 @@
 	
 #define clk_portf 5    /* provide clock to portF */
 #define clk_porte 4	 	 /* provide clock to portE */
+#define clk_portd 3
+#define clk_portb 1
 #define PIOSC 0	/*Precision internal oscillator*/
 #define MOSC 1	/*External main oscillator*/
 
@@ -13,43 +15,43 @@ void clockInit(unsigned char clk_src);
 {
 	unsigned char data = 0;
 	clockInit(MOSC);
-	uartInit();
+	uart_1_Init();
 	gpioPinInit(GPIO, OUTPUT, red_led);
 	gpioPinInit(GPIO, OUTPUT, blue_led);
 	gpioPinInit(GPIO, OUTPUT, green_led);
 	
-	uart_7_Print("Waiting for instructions: \n");
+	uart_1_Print("Waiting for instructions: \n");
 	while(1)
 	{
-		data = uart_7_Receive();
+		data = uart_1_Receive();
 		if (data == 'a')
 		{
-			uart_7_Print("RED LED ON \n");
+			uart_1_Print("RED LED ON \n");
 			led(red_led, ON);
 		}
 		else if (data == 'b')
 		{
-			uart_7_Print("RED LED OFF \n");
+			uart_1_Print("RED LED OFF \n");
 			led(red_led, OFF);
 		}
 		else if (data == 'c')
 		{
-			uart_7_Print("GREEN LED ON \n");
+			uart_1_Print("GREEN LED ON \n");
 			led(green_led, ON);
 		}
 		else if (data == 'd')
 		{
-			uart_7_Print("GREEN LED OFF \n");
+			uart_1_Print("GREEN LED OFF \n");
 			led(green_led, OFF);
 		}
 		else if (data == 'e')
 		{
-			uart_7_Print("BLUE LED ON \n");
+			uart_1_Print("BLUE LED ON \n");
 			led(blue_led, ON);
 		}
 		else if (data == 'f')
 		{
-			uart_7_Print("BLUE LED OFF \n");
+			uart_1_Print("BLUE LED OFF \n");
 			led(blue_led, OFF);
 		}
 		else
@@ -73,7 +75,7 @@ void clockInit(unsigned char clk_src)
 		SYSCTL->RCC = 0x078E3AD1;
 	}
   for (i = 0; i < 10000; i++);
-	RCGCGPIO_Reg |= ((1 << clk_portf) | (1 << clk_porte));  // clock for PORTF
+	RCGCGPIO_Reg |= ((1 << clk_portf) | (1 << clk_portb));  // clock for PORTF
 	// SYSCTL->RCGC0 |= (1 << clk_portf);	// legacy register not used here.
 }
 
