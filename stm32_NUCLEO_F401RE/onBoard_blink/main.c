@@ -22,4 +22,5 @@ int main(void)
   	led(ON);
   	delayUS(my_delay_us);
   }
+  return 0;
 }
