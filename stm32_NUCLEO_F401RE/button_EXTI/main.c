@@ -35,6 +35,7 @@ int main(void)
 			led(OFF);
 		}
 	}
+	return 0;
 }
 
 
