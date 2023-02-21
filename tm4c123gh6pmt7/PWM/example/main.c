@@ -6,7 +6,7 @@ void clockInit(unsigned char clk_src);
 
 int main(void)
 {
-	pwm();
+	pwm(20, 5);
 	while (1)
 	{			
 	  {}
