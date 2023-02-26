@@ -18,10 +18,10 @@ volatile unsigned char system_state = 0;
 
 void SysTick_Handler(void)
 {
-	if (SysTick->CTRL & (1 << 16))
+  if (SysTick->CTRL & (1 << 16))
   {
     system_state = 1;
-	  SysTick->CTRL = 0;  // disable the timer
+    SysTick->CTRL = 0;  // disable the timer
   }
 }
 
@@ -40,9 +40,9 @@ int main(void)
 		{
 			led(red_led, ON);
 			SYSCTRL_Reg |= (1 << 2);// when triggered go to deep sleep
-	    sysTickInit(SysTick_CLOCK_SRC_PIOSC, SysTick_INTERRUPT_EN, 4);// timeout is 4 sec
-	    __ASM("WFI");// go to deep sleep
-	    led(red_led, OFF);
+	                sysTickInit(SysTick_CLOCK_SRC_PIOSC, SysTick_INTERRUPT_EN, 4);// timeout is 4 sec
+	                __ASM("WFI");// go to deep sleep
+	                led(red_led, OFF);
 		}
 		else
 		{
