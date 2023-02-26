@@ -33,7 +33,7 @@ int main(void)
 		{
 			led(red_led, ON);
 			goToSleep(SLEEP_WAKEUP_WFI, SLEEP_MODE_DEEP);
-      led(red_led, OFF);
+			led(red_led, OFF);
 		}
 		else
 		{
