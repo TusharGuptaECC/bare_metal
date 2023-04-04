@@ -18,7 +18,7 @@
 */
 #include<avr/io.h>
 #include<util/delay.h>
-#include"SK_LCD_16x2.h"
+#include"SonalKunj_LCD_16x2.h"
 
 int main()
 {
