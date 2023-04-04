@@ -1,4 +1,4 @@
-#include"SK_LCD_16x2.h"
+#include"SonalKunj_LCD_16x2.h"
 
 void initLcd(unsigned char bit)
 {
@@ -90,3 +90,17 @@ void sendData(unsigned char bit,unsigned char data)
 		PORTB &= ~( 1 << 0 );
 	}
 }
+
+void print(unsigned char *message)
+{
+   while(*message)
+   {
+      sendData(8, *(message++));
+   }
+}
+
+void nextLine(void)
+{
+   sendCmd(8, 0xC0);
+}
+
