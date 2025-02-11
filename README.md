@@ -1,4 +1,4 @@
-# Open-Source Microcontroller Driver Collection
+# Microcontroller Driver Collection
 
 ## Purpose
 This repository is an ongoing effort to build the **largest open-source collection of raw drivers** for various microcontrollers and peripherals. It currently includes driver code for:
